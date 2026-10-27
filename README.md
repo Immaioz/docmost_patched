@@ -16,9 +16,15 @@ git clone https://github.com/Immaioz/docmost_patched.git
 cd docmost_patched
 ```
 
-2. Update secrets in `docker-compose.yml`:
-   - `APP_SECRET` - generate a long random string
-   - `POSTGRES_PASSWORD` / `DATABASE_URL` - use a strong password
+2. Create the env file and fill in the secrets:
+```bash
+cp .env.example .env
+# APP_SECRET:  openssl rand -hex 32
+# DB_PASSWORD: openssl rand -hex 24
+```
+
+`docker-compose.yml` reads every value from `.env`, so secrets never live in the
+compose file. Without `APP_SECRET` (32+ chars) the server refuses to start.
 
 3. Pull the prebuilt image and start:
 ```bash
@@ -39,6 +45,23 @@ echo "$GITHUB_PAT" | docker login ghcr.io -u Immaioz --password-stdin
 
 Database migrations (including the Bases schema) run automatically when the server
 boots, so no manual migration step is required.
+
+### Existing database
+
+`POSTGRES_PASSWORD` is only used the first time the `db_data` volume is initialised.
+On a volume that already exists it is ignored, and the app must use the password the
+database was created with (`DB_PASSWORD` in `.env`). If the old password was
+committed or shared, rotate it after the stack is up:
+
+```bash
+# 1. keep the OLD password in .env, start the stack, then:
+docker compose exec db psql -U docmost -d docmost \
+  -c "ALTER USER docmost WITH PASSWORD '<new-password>';"
+# 2. put the new password in .env and recreate the app container:
+docker compose up -d --force-recreate docmost
+```
+
+To start over instead (loses all data): `docker compose down -v`.
 
 ## What's patched
 

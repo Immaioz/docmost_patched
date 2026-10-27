@@ -1,13 +1,11 @@
 services:
   docmost:
-    # Published by .github/workflows/build-image.yml on every push to main.
-    # Deployment: `docker compose pull && docker compose up -d` (no local build,
-    # so no registry access is needed from this machine).
+    # Image built by .github/workflows/build-image.yml and published to GHCR.
+    # Deploy: `docker compose pull && docker compose up -d` (no local build, so no
+    # package-registry access is needed from this machine).
     #
-    # Local build instead: `docker compose up -d --build`, or, if container DNS is
-    # filtered (WSL/campus networks), build with host networking and tag it as the
-    # same name: `docker buildx build --allow=network.host --network=host \
-    #   -t ghcr.io/immaioz/docmost_patched:latest .`
+    # Local fallback: `docker compose up -d --build` (requires container egress to
+    # registry.npmjs.org, or build with host networking, see README).
     image: ghcr.io/immaioz/docmost_patched:latest
     build:
       context: .
@@ -16,10 +14,18 @@ services:
       - db
       - redis
     environment:
-      APP_URL: 'http://localhost:3000'
-      APP_SECRET: 'REPLACE_WITH_LONG_SECRET'
-      DATABASE_URL: 'postgresql://docmost:STRONG_DB_PASSWORD@db:5432/docmost'
+      APP_URL: '${APP_URL:-http://localhost:3000}'
+      APP_SECRET: '${APP_SECRET}'
+      DATABASE_URL: 'postgresql://docmost:${DB_PASSWORD}@db:5432/docmost'
       REDIS_URL: 'redis://redis:6379'
+      MAIL_DRIVER: '${MAIL_DRIVER:-smtp}'
+      SMTP_HOST: '${SMTP_HOST}'
+      SMTP_PORT: '${SMTP_PORT}'
+      SMTP_USERNAME: '${SMTP_USERNAME}'
+      SMTP_PASSWORD: '${SMTP_PASSWORD}'
+      SMTP_SECURE: '${SMTP_SECURE:-false}'
+      MAIL_FROM_ADDRESS: '${MAIL_FROM_ADDRESS}'
+      MAIL_FROM_NAME: '${MAIL_FROM_NAME:-Docmost}'
     ports:
       - "3000:3000"
     restart: unless-stopped
@@ -31,7 +37,7 @@ services:
     environment:
       POSTGRES_DB: docmost
       POSTGRES_USER: docmost
-      POSTGRES_PASSWORD: STRONG_DB_PASSWORD
+      POSTGRES_PASSWORD: '${DB_PASSWORD}'
     restart: unless-stopped
     volumes:
       - db_data:/var/lib/postgresql
