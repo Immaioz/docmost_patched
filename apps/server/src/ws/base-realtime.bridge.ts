@@ -13,6 +13,15 @@ export class BaseRealtimeBridge {
   protected loadServiceClass(): any {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
+      return require('../core/base/realtime/base-ws.service').BaseWsService;
+    } catch {
+      this.logger.debug(
+        'Core base realtime module not available, falling back to enterprise module',
+      );
+    }
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       return require('../ee/base/realtime/base-ws.service').BaseWsService;
     } catch {
       this.logger.debug(
@@ -27,7 +36,16 @@ export class BaseRealtimeBridge {
     this.resolved = true;
     const ServiceClass = this.loadServiceClass();
     if (!ServiceClass) return null;
-    this.svc = this.moduleRef.get(ServiceClass, { strict: false });
+
+    try {
+      this.svc = this.moduleRef.get(ServiceClass, { strict: false });
+    } catch (err) {
+      this.logger.warn(
+        `Base realtime service not registered: ${(err as Error).message}`,
+      );
+      this.svc = null;
+    }
+
     return this.svc;
   }
 
