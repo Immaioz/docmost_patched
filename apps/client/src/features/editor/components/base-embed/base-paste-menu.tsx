@@ -19,7 +19,7 @@ function getPastedBasePos(editor: EditorMenuProps["editor"]): number | null {
 
 export function BasePasteMenu({ editor }: EditorMenuProps) {
   const { t } = useTranslation();
-  const hasBases = useHasFeature(Feature.BASES);
+  const hasBases = true;
   const [highlighted, setHighlighted] = useState(false);
   const optionId = useId();
   const promptRef = useRef<HTMLDivElement>(null);

@@ -42,7 +42,7 @@ export function EmptyPageGetStarted({
   const editor = useAtomValue(pageEditorAtom);
   const titleEditor = useAtomValue(titleEditorAtom);
   const isSynced = useAtomValue(yjsSyncedAtom);
-  const hasBases = useHasFeature(Feature.BASES);
+  const hasBases = true;
   const hasTemplates = useHasFeature(Feature.TEMPLATES);
   const convertMutation = useConvertPageToBaseMutation();
   const [

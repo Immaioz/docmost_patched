@@ -59,7 +59,7 @@ export function BaseEmbedView({ node, editor, deleteNode }: NodeViewProps) {
   const pageId = node.attrs.pageId as string | null;
   const pendingKey = node.attrs.pendingKey as string | null;
   const wrapperRef = useRef<HTMLDivElement | null>(null);
-  const hasBases = useHasFeature(Feature.BASES);
+  const hasBases = true;
   const [menuOpen, setMenuOpen] = useState(false);
   // Suppress the query while the slash command awaits the server-assigned
   // pageId; useBaseQuery would otherwise fire with an empty key.

@@ -45,7 +45,7 @@ interface Props {
 
 export const MoreInsertsGroup: FC<Props> = ({ editor, templateMode }) => {
   const { t, i18n } = useTranslation();
-  const hasBases = useHasFeature(Feature.BASES);
+  const hasBases = true;
   const upgradeLabel = useUpgradeLabel();
 
   const setEmbed = (provider: string) =>
