@@ -1,62 +1,52 @@
-<div align="center">
-    <h1><b>Docmost</b></h1>
-    <p>
-        Open-source collaborative wiki and documentation software.
-        <br />
-        <a href="https://docmost.com"><strong>Website</strong></a> | 
-        <a href="https://docmost.com/docs"><strong>Documentation</strong></a> |
-        <a href="https://twitter.com/DocmostHQ"><strong>Twitter / X</strong></a>
-    </p>
-</div>
-<br />
+# Docmost Patched (Kanban/Bases enabled)
 
-## Getting started
+This repo contains minimal patches to enable Docmost EE features (Bases/Kanban) for self-hosted use, plus a `docker-compose.yml` configured to build locally from source.
 
-To get started with Docmost, please refer to our [documentation](https://docmost.com/docs) or try our [cloud version](https://docmost.com/pricing) .
+## Quick start
 
-## Features
+1. Clone this repo:
+```bash
+git clone https://github.com/Immaioz/docmost_patched.git
+cd docmost_patched
+```
 
-- Real-time collaboration
-- Diagrams (Draw.io, Excalidraw and Mermaid)
-- Spaces
-- Permissions management
-- Groups
-- Comments
-- Page history
-- Search
-- File attachments
-- Embeds (Airtable, Loom, Miro and more)
-- Translations (10+ languages)
+2. Update secrets in `docker-compose.yml`:
+   - `APP_SECRET` - generate a long random string
+   - `POSTGRES_PASSWORD` / `DATABASE_URL` - use a strong password
 
-### Screenshots
+3. Build and start:
+```bash
+docker compose up -d --build
+```
 
-<p align="center">
-<img alt="home" src="https://docmost.com/screenshots/home.png" width="70%">
-<img alt="editor" src="https://docmost.com/screenshots/editor.png" width="70%">
-</p>
+Access Docmost at http://localhost:3000
 
-### License
-Docmost core is licensed under the open-source AGPL 3.0 license.  
-Enterprise features are available under an enterprise license (Enterprise Edition).  
+## What's patched
 
-All files in the following directories are licensed under the Docmost Enterprise license defined in `packages/ee/License`.
-  - apps/server/src/ee
-  - apps/client/src/ee
-  - packages/ee
+- `apps/server/src/integrations/environment/license-check.service.ts` - Enables all features/license checks by default
+- `apps/client/src/ee/hooks/use-feature.ts` - Enables all EE features in UI by default
 
-### Contributing
+## Updating to a newer Docmost version
 
-See the [development documentation](https://docmost.com/docs/self-hosting/development)
+1. Add upstream remote (if not already):
+```bash
+git remote add upstream https://github.com/docmost/docmost.git
+```
 
-## Thanks
-Special thanks to;
+2. Fetch and merge/rebase upstream changes:
+```bash
+git fetch upstream
+git merge upstream/main  # or git rebase upstream/main
+```
 
-<img width="100" alt="Crowdin" src="https://github.com/user-attachments/assets/a6c3d352-e41b-448d-b6cd-3fbca3109f07" />
+3. Resolve conflicts if any (likely in the patched files). Keep the patched behavior (always return true/enabled).
 
-[Crowdin](https://crowdin.com/) for providing access to their localization platform.
+4. Rebuild the container:
+```bash
+docker compose up -d --build
+```
 
-
-<img width="48" alt="Algolia-mark-square-white" src="https://github.com/user-attachments/assets/6ccad04a-9589-4965-b6a1-d5cb1f4f9e94" />
-
-[Algolia](https://www.algolia.com/) for providing full-text search to the docs.
-
+## Tips
+- If you want to keep patches clean, use `git rebase` on a separate branch.
+- Always rebuild after changes (`--build`).
+- For production, use proper secrets and consider a reverse proxy.
