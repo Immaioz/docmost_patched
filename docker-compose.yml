@@ -1,5 +1,14 @@
 services:
   docmost:
+    # Published by .github/workflows/build-image.yml on every push to main.
+    # Deployment: `docker compose pull && docker compose up -d` (no local build,
+    # so no registry access is needed from this machine).
+    #
+    # Local build instead: `docker compose up -d --build`, or, if container DNS is
+    # filtered (WSL/campus networks), build with host networking and tag it as the
+    # same name: `docker buildx build --allow=network.host --network=host \
+    #   -t ghcr.io/immaioz/docmost_patched:latest .`
+    image: ghcr.io/immaioz/docmost_patched:latest
     build:
       context: .
       dockerfile: Dockerfile

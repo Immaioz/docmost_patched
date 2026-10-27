@@ -2,8 +2,8 @@
 
 This repo contains a minimal, source-level patch that enables Docmost's Bases/Kanban
 feature on a self-hosted instance: the server API for Bases is reimplemented in the
-public source tree, and `docker-compose.yml` is configured to build the image locally
-from this repository.
+public source tree, and the Docker image is built by GitHub Actions and published to
+GitHub Container Registry, so deployment is just `docker pull`.
 
 No license keys, no EE submodule and no client hacks are involved: the feature gate
 reports Bases as available because the backend actually exists.
@@ -20,12 +20,22 @@ cd docmost_patched
    - `APP_SECRET` - generate a long random string
    - `POSTGRES_PASSWORD` / `DATABASE_URL` - use a strong password
 
-3. Build and start:
+3. Pull the prebuilt image and start:
 ```bash
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
 
 Access Docmost at http://localhost:3000
+
+The image comes from `ghcr.io/immaioz/docmost_patched:latest` and is rebuilt by
+`.github/workflows/build-image.yml` on every push to `main`. If the package is still
+private, either make it public once (GitHub → your profile → Packages →
+`docmost_patched` → Package settings → Change visibility → Public) or log in first:
+
+```bash
+echo "$GITHUB_PAT" | docker login ghcr.io -u Immaioz --password-stdin
+```
 
 Database migrations (including the Bases schema) run automatically when the server
 boots, so no manual migration step is required.
@@ -70,8 +80,21 @@ The implementation reuses upstream infrastructure (page permissions, page servic
 
 ### Deployment
 
-- `docker-compose.yml` - `build: .` so `docker compose up -d --build` builds this
-  source tree instead of pulling a prebuilt image.
+- `.github/workflows/build-image.yml` - builds this source tree in GitHub Actions
+  (no `ee` submodule, no license) and pushes
+  `ghcr.io/immaioz/docmost_patched:latest` plus a `sha-<commit>` tag for pinning.
+- `docker-compose.yml` - uses that image, so the deployment host never has to build
+  or reach a package registry.
+
+## Local build (optional)
+
+The image is built in CI, but you can also build it yourself:
+
+```bash
+docker compose up -d --build
+# or, tagged to match the compose file:
+docker build -t ghcr.io/immaioz/docmost_patched:latest .
+```
 
 ## What works
 
@@ -96,6 +119,39 @@ The implementation reuses upstream infrastructure (page permissions, page servic
 - Bases created before this backend existed (isBase pages with no schema) get a
   default schema only when converted again; otherwise they open empty.
 
+## If a local build cannot resolve `registry.npmjs.org` (EAI_AGAIN)
+
+This only affects local builds (`docker compose build`). Pulling the CI image needs no
+package registry access, so `docker compose pull` is unaffected.
+
+Symptom: the build fails at `RUN npm install -g pnpm@11.28.2` with
+`getaddrinfo EAI_AGAIN registry.npmjs.org`, even though `docker pull` works fine.
+
+Cause: the build container has its own network namespace and DNS. On networks that
+filter outbound port 53 from containers (some campus/corporate/WSL setups) the build
+cannot resolve anything, while the daemon (host namespace) still can.
+
+Workaround — build with host networking:
+
+```bash
+docker buildx build --allow=network.host --network=host \
+  -t ghcr.io/immaioz/docmost_patched:latest .
+docker compose up -d --force-recreate
+```
+
+Alternative fix, if you prefer `docker compose up -d --build` to work: point the Docker
+daemon at a resolver reachable from containers, e.g. in `/etc/docker/daemon.json`
+(for Docker Engine inside WSL):
+
+```json
+{
+  "dns": ["<your-local-dns-server>"]
+}
+```
+
+then restart the daemon (`sudo systemctl restart docker`) and verify with
+`docker run --rm alpine nslookup registry.npmjs.org`.
+
 ## Updating to a newer Docmost version
 
 1. Add upstream remote (if not already):
@@ -119,12 +175,17 @@ git merge upstream/main  # or git rebase upstream/main
    bases migration, diff them against `apps/server/src/core/base/` and update the
    controller/DTOs accordingly.
 
-4. Rebuild the container:
+4. Rebuild the image: push to `main` and let GitHub Actions publish
+   `ghcr.io/immaioz/docmost_patched:latest` (or run the workflow manually from the
+   Actions tab), then on the deployment host:
 ```bash
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
 
 ## Tips
-- Always rebuild after changes (`--build`); the server compiles with `nest build`.
+- Prefer `docker compose pull && docker compose up -d`; the image is built in CI.
+- To build locally, remember to tag it `ghcr.io/immaioz/docmost_patched:latest` so the
+  compose file picks it up.
 - Type-check locally with `pnpm exec tsc -p apps/server/tsconfig.json --noEmit`.
 - For production, use proper secrets and consider a reverse proxy.
