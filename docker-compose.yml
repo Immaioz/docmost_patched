@@ -7,6 +7,9 @@ services:
     # Local fallback: `docker compose up -d --build` (requires container egress to
     # registry.npmjs.org, or build with host networking, see README).
     image: ghcr.io/immaioz/docmost_patched:latest
+    # `:latest` is mutable: without this, `docker compose up` would reuse an
+    # already-present local image and never see newer builds.
+    pull_policy: always
     build:
       context: .
       dockerfile: Dockerfile

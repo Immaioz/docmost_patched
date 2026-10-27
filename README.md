@@ -26,9 +26,8 @@ cp .env.example .env
 `docker-compose.yml` reads every value from `.env`, so secrets never live in the
 compose file. Without `APP_SECRET` (32+ chars) the server refuses to start.
 
-3. Pull the prebuilt image and start:
+3. Start (the published image is pulled automatically, see `pull_policy`):
 ```bash
-docker compose pull
 docker compose up -d
 ```
 
@@ -114,10 +113,14 @@ The implementation reuses upstream infrastructure (page permissions, page servic
 The image is built in CI, but you can also build it yourself:
 
 ```bash
-docker compose up -d --build
+docker compose up -d --build --pull never
 # or, tagged to match the compose file:
 docker build -t ghcr.io/immaioz/docmost_patched:latest .
+docker compose up -d --pull never
 ```
+
+`--pull never` matters: the compose file sets `pull_policy: always`, so without it
+Compose would replace your freshly built image with the published one.
 
 ## What works
 
@@ -200,15 +203,15 @@ git merge upstream/main  # or git rebase upstream/main
 
 4. Rebuild the image: push to `main` and let GitHub Actions publish
    `ghcr.io/immaioz/docmost_patched:latest` (or run the workflow manually from the
-   Actions tab), then on the deployment host:
-```bash
-docker compose pull
-docker compose up -d
-```
+   Actions tab). On the deployment host, `docker compose up -d` already picks it up
+   because the compose file sets `pull_policy: always`; `docker compose pull` is only
+   needed if you want the download as a separate, visible step.
 
 ## Tips
-- Prefer `docker compose pull && docker compose up -d`; the image is built in CI.
-- To build locally, remember to tag it `ghcr.io/immaioz/docmost_patched:latest` so the
-  compose file picks it up.
+- `docker compose up -d` always pulls `:latest` (see `pull_policy`), so it is enough
+  after a new CI build; `docker compose pull` is optional, it just makes the download
+  an explicit step.
+- To build locally, tag it `ghcr.io/immaioz/docmost_patched:latest` and start with
+  `--pull never`, otherwise Compose fetches the published image instead.
 - Type-check locally with `pnpm exec tsc -p apps/server/tsconfig.json --noEmit`.
 - For production, use proper secrets and consider a reverse proxy.
